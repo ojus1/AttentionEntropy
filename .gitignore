@@ -2,3 +2,4 @@ log/
 checkpoint/
 data
 *__pycache__*
+stats/

@@ -10,9 +10,31 @@ import sys
 import time
 import math
 
+import torch
 import torch.nn as nn
 import torch.nn.init as init
 
+import numpy as np
+from sklearn.model_selection import train_test_split
+
+class Subset(torch.utils.data.Dataset):
+    def __init__(self, ds, proportion):
+
+        indices = np.arange(len(ds))
+        targets = ds.targets
+        self.ds = ds
+        self.subset_indices, _ = train_test_split(indices, train_size=proportion, stratify=targets) 
+        self.subset_indices = np.array(self.subset_indices)
+
+    def __getitem__(self, idx):
+        return self.ds[self.subset_indices[idx]]
+    
+    def __len__(self):
+        return len(self.subset_indices)
+
+import json
+def dump_stats(stats):
+    json.dump(stats, open(f"./stats/{time.time()}.json", "w"))
 
 def get_mean_and_std(dataset):
     '''Compute the mean and std value of dataset.'''
