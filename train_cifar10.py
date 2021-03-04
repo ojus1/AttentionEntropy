@@ -41,7 +41,7 @@ parser.add_argument('--patch', default='4', type=int)
 parser.add_argument('--cos', action='store_true', help='Train with cosine annealing scheduling')
 parser.add_argument('--use_attention_entropy', required=True, type=int, help='whether to use entropy or not') # resnets.. 1e-3, Vit..1e-4?
 parser.add_argument('--max_batches_ae', type=int, default=50, help='Number of batches to use attention entropy.')
-parser.add_argument('--ae_weight', type=float, default=0.1, help='Coefficient for attention entropy penalty')
+parser.add_argument('--ae_weight', type=float, default=0.01, help='Coefficient for attention entropy penalty')
 parser.add_argument('--random_seed', type=int, default=123, help='Random Seed for experiments.')
 parser.add_argument('--run', type=int, default=0, help='run id.')
 parser.add_argument('--proportion', type=float, default=0.9, help='Proportion of Dataset to use for training')
@@ -63,7 +63,7 @@ best_loss = float('inf')
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
 # Tensorboard writer
-tb_writer = SummaryWriter(f"./log/{args.net}_ae_{args.use_attention_entropy}_run_{args.run}/")
+tb_writer = SummaryWriter(f"./log/{args.net}_ae_{args.use_attention_entropy}_run_{args.run}_prop_{args.proportion}/")
 
 # Data
 print('==> Preparing data..')
@@ -142,6 +142,7 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patienc
 
 ##### Training
 step = 0
+from tqdm import tqdm
 def train(epoch):
     global ENTROPY_WEIGHT, step
     print('\nEpoch: %d' % epoch)
@@ -149,7 +150,7 @@ def train(epoch):
     train_loss = 0
     correct = 0
     total = 0
-    for batch_idx, (inputs, targets) in enumerate(trainloader):
+    for batch_idx, (inputs, targets) in enumerate(tqdm(trainloader)):
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad()
         outputs, ent = net(inputs, return_ent=True)
@@ -172,8 +173,8 @@ def train(epoch):
         tb_writer.add_scalar("LossCE/train", loss_ce.item(), step)
         tb_writer.add_scalar("LossAE/train", loss_ae.item(), step)
 
-        progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-            % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
+        #progress_bar(batch_idx, len(trainloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+        #    % (train_loss/(batch_idx+1), 100.*correct/total, correct, total))
 
         step += 1
 
@@ -190,7 +191,7 @@ def test(epoch):
     total = 0
     num_batches = 0
     with torch.no_grad():
-        for batch_idx, (inputs, targets) in enumerate(testloader):
+        for batch_idx, (inputs, targets) in enumerate(tqdm(testloader)):
             inputs, targets = inputs.to(device), targets.to(device)
             outputs, ent = net(inputs, return_ent=True)
             loss = criterion(outputs, targets)
@@ -201,8 +202,8 @@ def test(epoch):
             total += targets.size(0)
             correct += predicted.eq(targets).sum().item()
 
-            progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
-                % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
+            #progress_bar(batch_idx, len(testloader), 'Loss: %.3f | Acc: %.3f%% (%d/%d)'
+            #    % (test_loss/(batch_idx+1), 100.*correct/total, correct, total))
             num_batches += 1
 
     tb_writer.add_scalar("Accuracy/val", 100.*correct/total, step)
@@ -256,7 +257,7 @@ for epoch in range(start_epoch, args.n_epochs):
     print(list_loss)
 
 stats = {
-    "name": f"{args.net}_ae_{args.use_attention_entropy}_run_{args.run}",
+    "name": f"{args.net}_ae_{args.use_attention_entropy}_run_{args.run}_prop_{args.proportion}",
     "best_test_acc": best_acc,
     "best_test_loss": best_loss,
     "use_attention_entropy": args.use_attention_entropy,
