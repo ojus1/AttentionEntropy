@@ -1,22 +1,50 @@
-# vision-transformers-cifar10
-Let's train vision transformers for cifar 10! 
+# Attention Entropy
 
-This is an unofficial and elementary implementation of `An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale`.
+Experimenting with a novel Regularization "Attention Entropy" to help make transformers data efficient.
 
-I use pytorch for implementation.
+## TLDR
+Force tokens to only attend to few other tokens i.e. low entropy in attention weights. 
+This restriction is lifted after few hundred batches of training.
 
-# Usage
-`python train_cifar10.py` # vit-patchsize-4
+### Formulation
 
-`python train_cifar10.py --patch 2` # vit-patchsize-2
+The `Attention Entropy` penalty is defined as:
+<p style="text-align: center;">
+<img src="assets/attention_entropy_penalty.png" height="80">
+<br>
+<img src="assets/attention_entropy.png" height="80">
+</p>
 
-`python train_cifar10.py --net res18` # resnet18
+Attention Weights for a layer is defined as:
+<p style="text-align: center;">
+<img src="assets/attention1.png" height="80">
+</p>
+Where,
+<p style="text-align: center;">
+<img src="assets/attention2.png" height="30">
+</p>
 
-# Results..
+### PyTorch Implementation
 
-|             | Accuracy |
-|:-----------:|:--------:|
-| ViT patch=2 |    80%    |
-| ViT patch=4 |    80%   |
-| ViT patch=8 |    30%   |
-|   resnet18  |  93% ;)  |
+In [Line 43](models/vit.py), 
+```python
+def attention_entropy(attention):
+    attention = attention + 1e-8 # to avoid getting NaNs (log0 = nan)
+    return (-attention * torch.log(attention)).sum(-1).mean()
+```
+
+## Usage
+### CIFAR10
+- Train ViT with Attention Entropy
+```python
+python3 train_cifar10.py --net vit --use_attention_entropy 1
+```
+- Train ViT without Attention Entropy
+```python
+python3 train_cifar10.py --net vit --use_attention_entropy 0
+```
+
+## Experiments
+```
+Coming Soon!
+```
